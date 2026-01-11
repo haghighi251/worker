@@ -1,0 +1,1 @@
+export type ORMTypes = "mysql" | "mariadb" | "postgres";
