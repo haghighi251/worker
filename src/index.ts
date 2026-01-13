@@ -4,9 +4,16 @@ import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import companyRouter  from "@/infrastructure/http/routes/company";
 import { getAppDataSource } from '@/infrastructure/database/app-data-source';
+import { setupLogging } from '@/infrastructure/logs/logging';
+import { ROUTES } from '@/infrastructure/http/routes/routes';
+import { setupProxies } from '@/infrastructure/shared/proxy';
 
 const app = express();
 dotenv.config();
+
+// To log the incoming requests
+setupLogging(app);
+setupProxies(app, ROUTES);
 
 const port = process.env.PORT || 8000;
 
