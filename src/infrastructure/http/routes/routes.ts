@@ -13,7 +13,7 @@ export interface ProxyRoute {
 
 export const ROUTES: ProxyRoute[] = [
     {
-        url: '/free',
+        url: '/company/new',
         auth: false,
         creditCheck: false,
         rateLimit: {
@@ -24,7 +24,7 @@ export const ROUTES: ProxyRoute[] = [
             target: "https://www.google.com",
             changeOrigin: true,
             pathRewrite: {
-                [`^/free`]: '',
+                [`^/company/new`]: '',
             },
         }
     },

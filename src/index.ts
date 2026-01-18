@@ -13,6 +13,8 @@ import { setupCreditCheck } from '@/infrastructure/shared/middlewares/creadit-ch
 const app = express();
 dotenv.config();
 
+console.log(process.env.NODE_ENV);
+
 // To log the incoming requests
 setupLogging(app);
 setupRateLimit(app, ROUTES);

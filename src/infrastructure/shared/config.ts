@@ -1,8 +1,4 @@
-// config/index.ts
-import dotenv from 'dotenv';
 import { z } from 'zod';
-
-dotenv.config();
 
 // Define schema for ONLY specified variables
 const envSchema = z.object({
