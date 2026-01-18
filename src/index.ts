@@ -6,8 +6,9 @@ import companyRouter  from "@/infrastructure/http/routes/company";
 import { getAppDataSource } from '@/infrastructure/database/app-data-source';
 import { setupLogging } from '@/infrastructure/logs/logging';
 import { ROUTES } from '@/infrastructure/http/routes/routes';
-import { setupProxies } from '@/infrastructure/shared/proxy';
-import { setupRateLimit } from '@/infrastructure/shared/rate-limit';
+import { setupProxies } from '@/infrastructure/shared/middlewares/proxy';
+import { setupRateLimit } from '@/infrastructure/shared/middlewares/rate-limit';
+import { setupCreditCheck } from '@/infrastructure/shared/middlewares/creadit-check';
 
 const app = express();
 dotenv.config();
@@ -15,6 +16,7 @@ dotenv.config();
 // To log the incoming requests
 setupLogging(app);
 setupRateLimit(app, ROUTES);
+setupCreditCheck(app, ROUTES);
 setupProxies(app, ROUTES);
 
 const port = process.env.PORT || 8000;
