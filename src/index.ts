@@ -1,55 +1,70 @@
 import 'reflect-metadata';
-import dotenv from "dotenv";
-import express, { NextFunction, Request, Response } from "express";
-import cors from "cors";
-import companyRouter  from "@/infrastructure/http/routes/company";
-import { getAppDataSource } from '@/infrastructure/database/app-data-source';
-import { setupLogging } from '@/infrastructure/logs/logging';
-import { ROUTES } from '@/infrastructure/http/routes/routes';
-import { setupProxies } from '@/infrastructure/shared/middlewares/proxy';
-import { setupRateLimit } from '@/infrastructure/shared/middlewares/rate-limit';
-import { setupCreditCheck } from '@/infrastructure/shared/middlewares/creadit-check';
-
-const app = express();
+import dotenv from 'dotenv';
 dotenv.config();
 
-console.log(process.env.NODE_ENV);
+import express, { NextFunction, Request, Response } from 'express';
+import cors from 'cors';
+import { prisma } from '@/infrastructure/database/prisma';
+import companyRouter from '@/infrastructure/http/routes/company';
+import { setupLogging } from '@/infrastructure/logs/logging';
 
-// To log the incoming requests
+const app = express();
+
+// ── Middleware ────────────────────────────────────────────────────────────────
+
 setupLogging(app);
-setupRateLimit(app, ROUTES);
-setupCreditCheck(app, ROUTES);
-setupProxies(app, ROUTES);
-
-const port = process.env.PORT || 8000;
-
-export type RequestError = Error & { status: number };
-
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (_: Request, res: Response) => {
-  res.send({
-    success: false,
-    error: "Please don't call this URL again.",
-    result: null,
-  });
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+/** Health endpoint — used by Docker and monitoring to verify the service is up */
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ success: true, service: 'worker', status: 'ok' });
 });
+
 app.use('/company', companyRouter);
 
-app.use((error: RequestError, _: Request, res: Response, next: NextFunction) => {
-  let errorStatus = error.status || 500;
-  let errorMessage = error.message || "Something went wrong.";
-  return res.status(errorStatus).json({
-    success: false,
-    error: errorMessage,
-  });
+/** Catch-all for unmatched routes */
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ success: false, error: 'Please use a valid endpoint.' });
 });
 
-getAppDataSource().initialize().then(() => {
+// ── Global error handler ──────────────────────────────────────────────────────
+
+export type RequestError = Error & { status?: number };
+
+app.use((error: RequestError, _req: Request, res: Response, _next: NextFunction) => {
+  const status  = error.status ?? 500;
+  const message = error.message ?? 'Something went wrong.';
+  console.error(`[Worker] Error: ${message}`);
+  res.status(status).json({ success: false, error: message });
+});
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+const port = Number(process.env.PORT) || 8001;
+
+async function bootstrap() {
+  try {
+    // Verify the database connection before accepting traffic
+    await prisma.$connect();
+    console.log('[Worker] PostgreSQL connected via Prisma');
+
     app.listen(port, () => {
-        console.log(`🚀 Server is running on http://localhost:${port}`);
+      console.log(`🚀 Worker service ready at http://localhost:${port}`);
     });
-}).catch((error: unknown) => console.log('Error initializing data source', error));
+  } catch (error) {
+    console.error('[Worker] Failed to connect to database:', error);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+}
+
+// Gracefully disconnect Prisma on shutdown
+process.on('SIGINT',  async () => { await prisma.$disconnect(); process.exit(0); });
+process.on('SIGTERM', async () => { await prisma.$disconnect(); process.exit(0); });
+
+bootstrap();
 
 export default app;

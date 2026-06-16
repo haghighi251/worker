@@ -1,15 +1,24 @@
-# Dockerfile for Express
-FROM node:latest
+# Dockerfile for Worker Service (Kafka Consumer, Test Executor, Vulnerabilities Fetcher)
+FROM node:20-alpine
 
-WORKDIR /api-gateway
-COPY package.json /api-gateway
-RUN npm install pnpm -g
-RUN npm install ts-node-dev -g
+WORKDIR /worker
+
+# Install global tools
+RUN npm install -g pnpm ts-node-dev
+
+# Copy dependencies first
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies (recreate lock if version mismatch)
+RUN pnpm install
 
 # Install utilities
-RUN apt-get update && apt-get install -y iputils-ping netcat-openbsd
+RUN apk add --no-cache curl netcat-openbsd iputils
 
-COPY . /api-gateway
+# Copy entire source code
+COPY . .
 
-EXPOSE 3001
+EXPOSE 8001
+
+# Start in dev mode
 CMD ["pnpm", "run", "dev"]
