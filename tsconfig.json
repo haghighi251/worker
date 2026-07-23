@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "outDir": "./dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@application/*": ["application/*"],
+      "@infrastructure/*": ["infrastructure/*"],
+      "@domain/*": ["domain/*"],
+    },
+    "typeRoots": [
+      "./src/infrastructure/types",
+      "./node_modules/@types"
+    ]
+  },
+  "include": ["src/**/*", "src/infrastructure/types/**/*"],
+  "exclude": ["node_modules"]
+}
