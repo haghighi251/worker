@@ -4,9 +4,17 @@ import { config } from '@/infrastructure/shared/config';
 export const KAFKA_TOPICS = {
   PACKAGE_SCAN: 'package.scan',
   VULNERABILITY_FETCHED: 'vulnerability.fetched',
+  /**
+   * Produced by aba-bl whenever a scan finds a vulnerability affecting a
+   * service's active packages. Consumed here to upsert notification-tracking
+   * state only — the actual digest email is sent later by the daily sweep,
+   * not by this consumer.
+   */
+  VULNERABILITY_NOTIFICATION_PENDING: 'vulnerability.notification.pending',
 } as const;
 
 export const PACKAGE_SCAN_CONSUMER_GROUP = 'worker-package-scan';
+export const VULNERABILITY_NOTIFICATION_PENDING_CONSUMER_GROUP = 'worker-vulnerability-notification-pending';
 
 const kafka = new Kafka({
   clientId: 'worker',
