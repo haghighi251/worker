@@ -6,9 +6,18 @@ import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import { prisma } from '@/infrastructure/database/prisma';
 import companyRouter from '@/infrastructure/http/routes/company';
+import notificationSweepRouter from '@/infrastructure/http/routes/notificationSweep';
 import { setupLogging } from '@/infrastructure/logs/logging';
 import { startPackageScanConsumer, stopPackageScanConsumer } from '@/infrastructure/kafka/consumers/packageScanConsumer';
+import {
+  startVulnerabilityNotificationPendingConsumer,
+  stopVulnerabilityNotificationPendingConsumer,
+} from '@/infrastructure/kafka/consumers/vulnerabilityNotificationPendingConsumer';
 import { disconnectKafkaProducer } from '@/infrastructure/kafka/kafkaClient';
+import {
+  startNotificationDigestScheduler,
+  stopNotificationDigestScheduler,
+} from '@/infrastructure/scheduler/notificationDigestScheduler';
 
 const app = express();
 
@@ -26,6 +35,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.use('/company', companyRouter);
+app.use('/internal/notifications', notificationSweepRouter);
 
 /** Catch-all for unmatched routes */
 app.get('/', (_req: Request, res: Response) => {
@@ -63,6 +73,15 @@ async function bootstrap() {
     startPackageScanConsumer()
       .then(() => console.log('[Worker] package.scan consumer started'))
       .catch((error) => console.error('[Worker] Failed to start package.scan consumer:', error?.message));
+
+    startVulnerabilityNotificationPendingConsumer()
+      .then(() => console.log('[Worker] vulnerability.notification.pending consumer started'))
+      .catch((error) =>
+        console.error('[Worker] Failed to start vulnerability.notification.pending consumer:', error?.message),
+      );
+
+    startNotificationDigestScheduler();
+    console.log('[Worker] Notification digest scheduler started');
   } catch (error) {
     console.error('[Worker] Failed to connect to database:', error);
     await prisma.$disconnect();
@@ -71,9 +90,11 @@ async function bootstrap() {
 }
 
 async function shutdown() {
+  stopNotificationDigestScheduler();
   await Promise.allSettled([
     prisma.$disconnect(),
     stopPackageScanConsumer(),
+    stopVulnerabilityNotificationPendingConsumer(),
     disconnectKafkaProducer(),
   ]);
   process.exit(0);

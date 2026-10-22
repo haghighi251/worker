@@ -17,6 +17,25 @@ const envSchema = z.object({
   BFF_URL: z.string().default('http://localhost:3002'),
   ENCRYPTION_KEY: z.string().default('THE_VALUE_OF_ENCRYPTION_KEY_GOES_HERE'),
   KAFKA_BROKERS: z.string().default('localhost:9092'),
+  // Same variable names as aba-bl's MailerModule config, so both services
+  // read the same .env values — worker only sends the vulnerability digest,
+  // aba-bl still owns other transactional email (password reset, etc).
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  // How often the digest sweep's cron tick fires — NOT how often a given
+  // service actually gets re-notified (that's governed by
+  // NOTIFICATION_DIGEST_INTERVAL_HOURS below plus the sweep's own claim
+  // guard). Default: once a day at 08:00.
+  NOTIFICATION_DIGEST_CRON: z.string().default('0 8 * * *'),
+  // Minimum time between two digest emails for the same package, applied by
+  // the sweep after a successful send (rolling from lastNotifiedAt).
+  NOTIFICATION_DIGEST_INTERVAL_HOURS: z.coerce.number().default(24),
+  // Shared-secret header required by the internal "run sweep now" endpoint.
+  // Empty in dev/test (that endpoint then allows any caller); must be set
+  // in production.
+  INTERNAL_API_KEY: z.string().default(''),
 });
 
 // Parse and validate
@@ -38,6 +57,13 @@ export const config = {
   BFF_URL: env.BFF_URL,
   ENCRYPTION_KEY: env.ENCRYPTION_KEY,
   KAFKA_BROKERS: env.KAFKA_BROKERS,
+  SMTP_HOST: env.SMTP_HOST,
+  SMTP_PORT: env.SMTP_PORT,
+  SMTP_USER: env.SMTP_USER,
+  SMTP_PASS: env.SMTP_PASS,
+  NOTIFICATION_DIGEST_CRON: env.NOTIFICATION_DIGEST_CRON,
+  NOTIFICATION_DIGEST_INTERVAL_HOURS: env.NOTIFICATION_DIGEST_INTERVAL_HOURS,
+  INTERNAL_API_KEY: env.INTERNAL_API_KEY,
 };
 
 // TypeScript type
